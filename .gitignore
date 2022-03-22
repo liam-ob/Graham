@@ -1,0 +1,15 @@
+;; 22/03/2022
+;; liam-ob
+;;
+;; gitignore for Python using pyCharm
+;;
+
+;;files to ignore
+
+
+;;extensions to ignore
+*.log
+
+
+;;directories to ignore
+.idea/
