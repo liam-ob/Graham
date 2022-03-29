@@ -1,35 +1,39 @@
 import hmac
 import json
 import time
-import pprint
 import websocket
+import math
+import datetime
 
 
-# import time
-# import hmac
-# from requests import Request
+class TimedValue:
+    def __init__(self, timeout_value):
+        self.timeout_value = timeout_value
+        self._started_at = datetime.datetime.utcnow()
+
+    def __call__(self):
+        time_passed = datetime.datetime.utcnow() - self._started_at
+        if time_passed.total_seconds() > 20:
+            return True
+        return False
+
 
 def main():
-    # ts = int(time.time() * 1000)
-    # request = Request('GET', 'https://ftx.com/api')
-    # prepared = request.prepare()
-    # signature_payload = f'{ts}{prepared.method}{prepared.path_url}'.encode()
-    # signature = hmac.new('MLvuKeb0xgfC2O6RlCxhOIrHuTxYs_LZ0NgSimir'.encode(), signature_payload, 'sha256').hexdigest()
-    #
-    # prepared.headers['FTX-KEY'] = 'mwUORjWwcsCQ5czmCFXqXQx9Kl1_AX9pT0KIltmh' # API Key
-    # prepared.headers['FTX-SIGN'] = signature
-    # prepared.headers['FTX-TS'] = str(ts)
-    #
-    # Only include line if you want to access a subaccount. Remember to URI-encode the subaccount name if it contains special characters!
-    # prepared.headers['FTX-SUBACCOUNT'] = 'my_subaccount_nickname'
-    #
-    # print(prepared.headers)
 
     SOCKET = "wss://ftx.com/ws/{'op': 'pong'}"
 
     api_key = "mwUORjWwcsCQ5czmCFXqXQx9Kl1_AX9pT0KIltmh"
     secret_key = "MLvuKeb0xgfC2O6RlCxhOIrHuTxYs_LZ0NgSimir"
-    trade_size = 10000
+    trade_size = 100
+
+    global sixty_seconds
+    sixty_seconds = TimedValue(60)
+
+    global twenty_seconds
+    twenty_seconds = TimedValue(20)
+
+    global market_momentum
+    market_momentum = 0
 
     def on_open(ws):
         print("opened connection\n\n")
@@ -39,32 +43,41 @@ def main():
                                         'sign': signa,
                                         'time': ts}}
         ws.send(json.dumps(auth))
-        data = {'op': 'subscribe', 'channel': 'trades', 'market': 'BTC-PERP'}
+        data = {'op': 'subscribe', 'channel': 'trades', 'market': 'SHIB-PERP'}
         ws.send(json.dumps(data))
 
     def on_close(ws):
         print("\nwebsocket closed!\n")
 
     def on_message(ws, message):
-        print("\n")
+        print('\nRECIEVED MESSAGE')
+
+        global market_momentum
         json_message = json.loads(message)
-        pprint.pprint(json_message)
-
-        market_momentum = 0
-
         data = json_message['data']
+
         for i in data:
             buy_or_sell = i['side']
             weight = (i['price'] * i['size'])
-            if weight > trade_size:
-                if buy_or_sell == 'buy':
-                    market_momentum += weight
-                    print('\t\t\t\t\tmomentum going up')
-                else:
-                    market_momentum -= weight
-                    print('\t\t\t\t\tmarket momentum going down')
 
-        print(market_momentum)
+            if buy_or_sell == 'sell':
+                market_momentum -= weight
+                print('market momentum taken')
+            else:
+                market_momentum += weight
+                print('market momentum added')
+        print('\tmarket momentum: ' + market_momentum)
+        if twenty_seconds():
+            print('\t\ttwenty seconds passed')
+            brain()
+
+    def brain():
+        trade_potential = math.sqrt(market_momentum)
+        print('\tTrade potential: ' + trade_potential)
+        if sixty_seconds():
+            print('sixty second exceeded function cannot pass')
+        if trade_potential > 10:
+            print('good trade')
 
     ws = websocket
     ws = ws.WebSocketApp(SOCKET, on_open=on_open, on_message=on_message, on_close=on_close)
