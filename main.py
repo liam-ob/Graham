@@ -13,7 +13,7 @@ class TimedValue:
 
     def __call__(self):
         time_passed = datetime.datetime.utcnow() - self._started_at
-        if time_passed.total_seconds() > 20:
+        if time_passed.total_seconds() > self.timeout_value:
             return True
         return False
 
@@ -52,7 +52,9 @@ def main():
     def on_message(ws, message):
         print('\nRECIEVED MESSAGE')
 
+        print(twenty_seconds())
         global market_momentum
+
         json_message = json.loads(message)
         data = json_message['data']
 
@@ -66,18 +68,29 @@ def main():
             else:
                 market_momentum += weight
                 print('market momentum added')
-        print('\tmarket momentum: ' + market_momentum)
-        if twenty_seconds():
-            print('\t\ttwenty seconds passed')
-            brain()
 
-    def brain():
-        trade_potential = math.sqrt(market_momentum)
-        print('\tTrade potential: ' + trade_potential)
+        print(market_momentum)
+        # print('\tmarket momentum: ' + market_momentum)
+        if twenty_seconds():
+            try:
+                print('\ttwenty seconds passed')
+                trade_potential = (math.sqrt(int(market_momentum)))
+                print('\t\tTrade potential: ' + str(trade_potential))
+                if trade_potential > 50:
+                    print('\t\t\tWe trading with this potential // do trade here')
+                else:
+                    print('\t\t\tNot trading with this potential')
+            except Exception as e:
+                print(e.args)
+
         if sixty_seconds():
-            print('sixty second exceeded function cannot pass')
-        if trade_potential > 10:
-            print('good trade')
+            market_momentum = 0
+            try:
+                twenty_seconds._started_at = datetime.datetime.utcnow()
+                sixty_seconds._started_at = datetime.datetime.utcnow()
+            except Exception as e:
+                print(e.args)
+
 
     ws = websocket
     ws = ws.WebSocketApp(SOCKET, on_open=on_open, on_message=on_message, on_close=on_close)
